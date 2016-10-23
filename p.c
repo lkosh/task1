@@ -2,43 +2,13 @@
 #include <time.h>
 #include <stdlib.h>
 #include <pthread.h>
-
+#include <omp.h>
 #define SIZE 10000
 double a[SIZE][SIZE];
 int i;
 double  b[SIZE][SIZE];
 double  c[SIZE][SIZE];
-typedef double __attribute((aligned(128))) al128d_t;
-int thread1_exited, thread2_exited;
-void *thread1_start(void *arg){
-	int errflag;
-	errflag = pthread_detach(pthread_self());
-	if (errflag){
-		pthread_exit(NULL);
-		return;
-	}
-	printf("thread1\n");
-	int i, j = 0;
-	for (i = 0 ; i < SIZE/2; i ++)
-		for (j = 0 ; j < SIZE; j ++)
-			a[i][j] = b[i][j] + c[i][j];
-	thread1_exited = 1;
-}
 
-void *thread2_start(void *arg){
-	int errflag;
-	errflag = pthread_detach(pthread_self());
-	if (errflag){
-		pthread_exit(NULL);
-		return;
-	}
-		printf("thread2\n");
-	int i, j = 0;
-	for (i = SIZE/2 ; i < SIZE; i ++)
-		for (j = 0 ; j < SIZE; j ++)
-			a[i][j] = b[i][j] + c[i][j];
-	thread2_exited = 1;
-}
 void main( int argc, char **argv )
 {
 // initialising matrixes
@@ -77,8 +47,9 @@ void main( int argc, char **argv )
 	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 	printf("Execution time after optimisation-1 is :%f seconds \n", time_spent);
 //optimisation step 2
-int step = 5;
+int step = 9;
 begin = clock();
+	#pragma parallel for
 	for (i = 0; i < SIZE; i ++){
 		for (j = 0; j < SIZE - step; j += step){
 			a[i][j] = b[i][j] + c[i][j];
@@ -86,31 +57,35 @@ begin = clock();
 			a[i][j+2] = b[i][j+2] + c[i][j+2];
 			a[i][j+3] = b[i][j+3] + c[i][j+3];
 			a[i][j+4] = b[i][j+4] + c[i][j+4];
-			
+			a[i][j+5] = b[i][j+5] + c[i][j+5];
+			a[i][j+6] = b[i][j+6] + c[i][j+6];
+			a[i][j+7] = b[i][j+7] + c[i][j+7];
+			a[i][j+8] = b[i][j+8] + c[i][j+8];
 		}
 	}
 	end = clock();
 	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 	printf("Execution time after optimisation 2 is :%f seconds \n", time_spent);
-// optimisation with threads
-	begin = clock();
-	int errflag;
-	pthread_t thread1, thread2;
-	errflag = pthread_create(&thread1, NULL, thread1_start, NULL);
-	if (errflag){
-		printf("Error creating a thread\n");
-		exit(1);
-	}
-	
-	errflag = pthread_create(&thread2, NULL, thread2_start, NULL);
-	if (errflag){
-		printf("Error creating a thread\n");
-		exit(1);
-	}
 
-	while (!thread1_exited || !thread2_exited){}
-	end = clock();
-	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-	printf("Execution time after optimisation with threads is :%f seconds \n", time_spent);
-	
+// optimisation with pragma parallel
+ step = 9;
+ double wall_timer = omp_get_wtime();
+	#pragma parallel for
+	for (i = 0; i < SIZE; i ++){
+		#pragma parallel for
+		for (j = 0; j < SIZE - step; j += step){
+			a[i][j] = b[i][j] + c[i][j];
+			a[i][j+1] = b[i][j+1] + c[i][j+1];
+			a[i][j+2] = b[i][j+2] + c[i][j+2];
+			a[i][j+3] = b[i][j+3] + c[i][j+3];
+			a[i][j+4] = b[i][j+4] + c[i][j+4];
+			a[i][j+5] = b[i][j+5] + c[i][j+5];
+			a[i][j+6] = b[i][j+6] + c[i][j+6];
+			a[i][j+7] = b[i][j+7] + c[i][j+7];
+			a[i][j+8] = b[i][j+8] + c[i][j+8];
+		}
+	}
+	//end = clock();
+	//time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	printf("Execution time after optimisation 3 is :%f seconds \n",  omp_get_wtime() - wall_timer);
 }
